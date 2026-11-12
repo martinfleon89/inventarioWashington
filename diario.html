@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Diario - Pizzería Tomasito</title>
+    <style>
+        :root {
+            --primary: #c0392b;
+            --secondary: #2c3e50;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --border: #e0e0e0;
+            --rojo: #e74c3c;
+            --rojo-bg: #fdecea;
+            --amarillo: #e67e22;
+            --amarillo-bg: #fef5e7;
+            --verde: #27ae60;
+            --verde-bg: #eafaf1;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        header { text-align: center; margin-bottom: 12px; }
+        h1 { color: var(--primary); margin: 0 0 4px 0; font-size: 1.5rem; }
+        .subtitle { color: var(--secondary); font-size: 0.85rem; margin: 0; font-weight: 600; }
+
+        #selectorSucursal {
+            display: flex; justify-content: center; align-items: center;
+            min-height: 80vh; text-align: center; padding: 10px;
+        }
+        .sucursal-card {
+            background: white; padding: 25px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 380px;
+        }
+        .sucursal-card h2 { color: var(--secondary); margin-top: 0; font-size: 1.3rem; }
+        .btn-sucursal {
+            display: block; width: 100%; padding: 14px; margin-top: 12px;
+            background-color: var(--primary); color: white; border: none; border-radius: 8px;
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+        }
+        .btn-sucursal.julio { background-color: #2980b9; }
+        .link-mensual { display: block; margin-top: 18px; font-size: 0.85rem; color: var(--secondary); }
+
+        #appContainer { display: none; }
+
+        .branch-banner {
+            background: #eef2f5; padding: 6px 12px; border-radius: 6px;
+            font-size: 0.8rem; font-weight: bold; color: var(--secondary);
+            margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        }
+        .btn-small {
+            background: var(--secondary); border: none; color: white; padding: 4px 8px;
+            border-radius: 4px; font-size: 0.7rem; cursor: pointer; flex: none; min-width: 0;
+        }
+
+        /* Resumen */
+        .resumen {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+        }
+        .resumen-box {
+            border-radius: 10px; padding: 10px 6px; text-align: center; cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .resumen-box .num { font-size: 1.5rem; font-weight: bold; display: block; }
+        .resumen-box .lbl { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+        .resumen-box.rojo { background: var(--rojo-bg); color: var(--rojo); }
+        .resumen-box.amarillo { background: var(--amarillo-bg); color: var(--amarillo); }
+        .resumen-box.verde { background: var(--verde-bg); color: var(--verde); }
+        .resumen-box.activo { border-color: currentColor; }
+
+        .fecha-conteo { font-size: 0.75rem; color: #7f8c8d; text-align: center; margin-bottom: 10px; }
+
+        .controls-card {
+            background: var(--card-bg); padding: 12px; border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;
+        }
+        .search-box {
+            width: 100%; box-sizing: border-box; padding: 10px; font-size: 1rem;
+            border: 1px solid var(--border); border-radius: 6px; outline: none;
+        }
+        .search-box:focus { border-color: var(--primary); }
+
+        .filtros { display: flex; gap: 6px; margin-top: 8px; }
+        .filtro-btn {
+            flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border);
+            background: #fff; color: var(--secondary); font-weight: bold; font-size: 0.8rem; cursor: pointer;
+        }
+        .filtro-btn.activo { background: var(--secondary); color: #fff; border-color: var(--secondary); }
+
+        .actions-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+        button {
+            flex: 1; min-width: 90px; padding: 9px; border: none; border-radius: 6px;
+            font-size: 0.8rem; font-weight: bold; cursor: pointer; color: white;
+        }
+        button:active { opacity: 0.8; }
+
+        .btn-whatsapp { background-color: #25a244; width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem; }
+        .btn-add { background-color: var(--primary); }
+        .btn-add-cat { background-color: #16a085; }
+        .btn-backup { background-color: #2980b9; }
+        .btn-cloud { background-color: #8e44ad; }
+        .btn-reset { background-color: #7f8c8d; }
+
+        .category-section {
+            background: var(--card-bg); border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 12px; overflow: hidden;
+        }
+        .category-header {
+            background-color: var(--secondary); color: white; padding: 10px 12px;
+            font-size: 0.95rem; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center; gap: 6px;
+        }
+        .category-count {
+            background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;
+        }
+        .category-count.alerta { background: var(--rojo); }
+
+        .items-list { padding: 0 10px; }
+
+        .item-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 6px; border-bottom: 1px solid var(--border);
+            border-left: 4px solid transparent; margin: 0 -10px; padding-left: 10px; padding-right: 10px;
+        }
+        .item-row:last-child { border-bottom: none; }
+        .item-row.estado-rojo { background: var(--rojo-bg); border-left-color: var(--rojo); }
+        .item-row.estado-amarillo { background: var(--amarillo-bg); border-left-color: var(--amarillo); }
+        .item-row.estado-verde { border-left-color: var(--verde); }
+
+        .item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .item-name { font-size: 0.9rem; font-weight: 500; word-break: break-word; }
+        .item-estado { font-size: 0.72rem; font-weight: bold; }
+        .estado-rojo .item-estado { color: var(--rojo); }
+        .estado-amarillo .item-estado { color: var(--amarillo); }
+        .estado-verde .item-estado { color: var(--verde); }
+        .estado-gris .item-estado { color: #95a5a6; font-weight: normal; }
+
+        .item-inputs { display: flex; gap: 4px; align-items: flex-end; flex-shrink: 0; }
+        .input-group { display: flex; flex-direction: column; align-items: center; }
+        .input-group label {
+            font-size: 0.55rem; color: #7f8c8d; margin-bottom: 1px; text-transform: uppercase; font-weight: bold;
+        }
+        input[type="number"] {
+            width: 52px; padding: 8px 2px; text-align: center; border: 1px solid var(--border);
+            border-radius: 5px; font-size: 0.95rem; outline: none; background: #fff;
+        }
+        input[type="number"].min-field { background: #f4f6f7; color: #555; width: 46px; }
+        input[type="number"]:focus { border-color: var(--primary); }
+
+        .btn-action {
+            background: none; border: none; cursor: pointer; font-size: 0.95rem;
+            padding: 2px; color: #7f8c8d; flex: none; min-width: 0;
+        }
+
+        .empty-state {
+            text-align: center; padding: 25px 15px; background: #fff; border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #555; font-size: 0.9rem;
+        }
+        .empty-state button { margin-top: 12px; width: 100%; padding: 12px; }
+
+        .no-results { text-align: center; padding: 20px; color: #7f8c8d; display: none; }
+
+        .modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 10px; width: 100%; max-width: 400px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;
+        }
+        .modal-content h3 { margin-top: 0; color: var(--secondary); }
+        .modal-content label { font-size: 0.85rem; font-weight: bold; display: block; margin-top: 10px; margin-bottom: 4px; }
+        .modal-content input, .modal-content select {
+            width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--border);
+            border-radius: 6px; font-size: 1rem; outline: none;
+        }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background-color: #95a5a6; }
+        .btn-save { background-color: #27ae60; }
+        .btn-delete-item { background-color: #e74c3c; }
+
+        .choice-btn {
+            display: block; width: 100%; padding: 12px; margin-top: 10px; text-align: left;
+            border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text);
+            font-size: 0.95rem; font-weight: bold; cursor: pointer;
+        }
+        .choice-btn span { display: block; font-size: 0.75rem; color: #7f8c8d; font-weight: normal; margin-top: 2px; }
+    </style>
+</head>
+<body>
+
+    <!-- Selección de Sucursal -->
+    <div id="selectorSucursal">
+        <div class="sucursal-card">
+            <h1>PIZZERÍA TOMASITO</h1>
+            <h2>Control Diario de Stock</h2>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">Elegí el local:</p>
+            <button class="btn-sucursal" onclick="elegirSucursal('washington')">🍕 Washington 486</button>
+            <button class="btn-sucursal julio" onclick="elegirSucursal('julio')">🍕 14 de Julio</button>
+            <a class="link-mensual" href="index.html">→ Ir al inventario mensual</a>
+        </div>
+    </div>
+
+    <!-- App -->
+    <div id="appContainer">
+        <header>
+            <h1>PIZZERÍA TOMASITO</h1>
+            <p class="subtitle">Control Diario · Mínimos de Mercadería</p>
+        </header>
+
+        <div class="branch-banner">
+            <span id="nombreSucursalBanner">Sucursal: --</span>
+            <span style="display:flex; gap:6px;">
+                <a href="index.html"><button class="btn-small">Mensual</button></a>
+                <button class="btn-small" onclick="cambiarSucursal()">Cambiar Local</button>
+            </span>
+        </div>
+
+        <div class="resumen">
+            <div class="resumen-box rojo" onclick="setFiltro('pedir')">
+                <span class="num" id="cntRojo">0</span><span class="lbl">Pedir</span>
+            </div>
+            <div class="resumen-box amarillo" onclick="setFiltro('pedir')">
+                <span class="num" id="cntAmarillo">0</span><span class="lbl">Justo</span>
+            </div>
+            <div class="resumen-box verde" onclick="setFiltro('todos')">
+                <span class="num" id="cntVerde">0</span><span class="lbl">OK</span>
+            </div>
+        </div>
+        <div class="fecha-conteo" id="fechaConteo"></div>
+
+        <div class="controls-card">
+            <input type="text" id="buscador" class="search-box" placeholder="Buscar producto..." oninput="aplicarFiltros()">
+            <div class="filtros">
+                <button class="filtro-btn activo" id="filtroTodos" onclick="setFiltro('todos')">Todos</button>
+                <button class="filtro-btn" id="filtroPedir" onclick="setFiltro('pedir')">Solo a pedir</button>
+                <button class="filtro-btn" id="filtroSinContar" onclick="setFiltro('sincontar')">Sin contar</button>
+            </div>
+            <button class="btn-whatsapp" onclick="compartirWhatsApp()">📲 Enviar lista de faltantes por WhatsApp</button>
+            <div class="actions-row">
+                <button class="btn-add" onclick="abrirModalNuevo()">+ Producto</button>
+                <button class="btn-add-cat" onclick="abrirModalCategoria()">+ Sección</button>
+            </div>
+            <div class="actions-row">
+                <button class="btn-backup" onclick="abrirModal('modalRespaldo')">Respaldo</button>
+                <button class="btn-cloud" onclick="abrirModal('modalImportar')">Copiar del mensual</button>
+                <button class="btn-reset" onclick="nuevoDia()">Nuevo día</button>
+            </div>
+        </div>
+
+        <div id="contenedor"></div>
+        <div id="noResults" class="no-results">No hay productos para mostrar.</div>
+    </div>
+
+    <!-- Modal Producto -->
+    <div id="modalProducto" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitulo">Editar Producto</h3>
+            <input type="hidden" id="editCat">
+            <input type="hidden" id="editItem">
+
+            <label>Nombre del Producto:</label>
+            <input type="text" id="inputNombre">
+
+            <label>Sección:</label>
+            <select id="selectCategoria"></select>
+
+            <label>Unidad:</label>
+            <select id="selectTipo">
+                <option value="unidad">Unidad</option>
+                <option value="litro">Litro</option>
+                <option value="kilogramos">Kilogramos</option>
+                <option value="gramos">Gramos</option>
+                <option value="caja">Caja</option>
+                <option value="bolsa">Bolsa</option>
+            </select>
+
+            <label>Mínimo (stock que no puede faltar):</label>
+            <input type="number" id="inputMinimo" min="0" step="any" placeholder="Ej: 10">
+
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="cerrarModal('modalProducto')">Cancelar</button>
+                <button id="btnEliminar" class="btn-delete-item" onclick="eliminarProducto()">Eliminar</button>
+                <button class="btn-save" onclick="guardarProducto()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sección -->
+    <div id="modalCategoria" class="modal">
+        <div class="modal-content">
+            <h3>Nueva Sección</h3>
+            <label>Nombre de la Sección:</label>
+            <input type="text" id="inputCategoria" placeholder="Ej: HELADERA, BEBIDAS, ETC.">
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="cerrarModal('modalCategoria')">Cancelar</button>
+                <button class="btn-save" onclick="guardarCategoria()">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Respaldo -->
+    <div id="modalRespaldo" class="modal">
+        <div class="modal-content">
+            <h3>Respaldo</h3>
+            <button class="choice-btn" onclick="exportarArchivo()">
+                💾 Guardar respaldo (.json)
+                <span>Descarga un archivo con productos, mínimos y stock.</span>
+            </button>
+            <button class="choice-btn" onclick="importarArchivo()">
+                📂 Restaurar desde archivo (.json)
+                <span>Carga un respaldo del control diario guardado antes.</span>
+            </button>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="cerrarModal('modalRespaldo')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Importar del mensual -->
+    <div id="modalImportar" class="modal">
+        <div class="modal-content">
+            <h3>Copiar productos del inventario mensual</h3>
+            <p style="font-size: 0.85rem; color: #666; margin-top: 0;">
+                Se agregan las secciones y productos del inventario mensual de esta sucursal (sin cantidades ni precios).
+                Los productos que ya tenés en el control diario no se duplican.
+            </p>
+            <label style="font-size:0.85rem; font-weight:bold;">Elegí qué secciones copiar:</label>
+            <div id="listaSeccionesMensual" style="margin-top:6px;"></div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="cerrarModal('modalImportar')">Cancelar</button>
+                <button class="btn-save" onclick="confirmarImportarMensual()">Copiar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUCURSALES = {
+            washington: 'Washington 486',
+            julio: '14 de Julio'
+        };
+
+        let branchKey = '';
+        let branchName = '';
+        let STORAGE_KEY = '';
+        let datos = { fecha: null, secciones: [] };
+        let filtroActual = 'todos';
+
+        function esc(str) {
+            return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function num(v) {
+            if (v === '' || v === null || v === undefined) return null;
+            const n = parseFloat(v);
+            return isNaN(n) ? null : n;
+        }
+
+        function redondear(n) {
+            return Math.round(n * 100) / 100;
+        }
+
+        // ---------- Sucursal ----------
+        window.onload = function () {
+            const saved = localStorage.getItem('tomasito_diario_branch');
+            if (saved && SUCURSALES[saved]) elegirSucursal(saved);
+        };
+
+        function elegirSucursal(key) {
+            branchKey = key;
+            branchName = SUCURSALES[key];
+            STORAGE_KEY = 'tomasito_diario_' + key;
+            localStorage.setItem('tomasito_diario_branch', key);
+
+            document.getElementById('selectorSucursal').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('nombreSucursalBanner').innerText = 'Sucursal: ' + branchName;
+
+            cargar();
+        }
+
+        function cambiarSucursal() {
+            localStorage.removeItem('tomasito_diario_branch');
+            location.reload();
+        }
+
+        // ---------- Datos ----------
+        function cargar() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                if (raw && Array.isArray(raw.secciones)) datos = raw;
+                else datos = { fecha: null, secciones: [] };
+            } catch (e) {
+                datos = { fecha: null, secciones: [] };
+            }
+            renderizar();
+        }
+
+        function guardar() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(datos));
+        }
+
+        function marcarFecha() {
+            datos.fecha = new Date().toISOString();
+            actualizarFecha();
+        }
+
+        // ---------- Estado de cada producto ----------
+        // rojo: stock por debajo del mínimo · amarillo: justo en el mínimo · verde: por encima · gris: sin contar o sin mínimo
+        function estadoItem(item) {
+            const stock = num(item.stock);
+            const minimo = num(item.minimo);
+            if (minimo === null) return { clase: 'gris', texto: 'Sin mínimo definido' };
+            if (stock === null) return { clase: 'gris', texto: `Sin contar · mín. ${minimo}` };
+            if (stock < minimo) {
+                const falta = redondear(minimo - stock);
+                return { clase: 'rojo', texto: `⚠ PEDIR: faltan ${falta} ${unidadCorta(item.tipo)}`, falta };
+            }
+            if (stock === minimo) return { clase: 'amarillo', texto: '● Justo en el mínimo' };
+            return { clase: 'verde', texto: '✓ OK' };
+        }
+
+        function unidadCorta(tipo) {
+            return { unidad: 'u.', litro: 'lts', kilogramos: 'kg', gramos: 'gr', caja: 'cajas', bolsa: 'bolsas' }[tipo] || 'u.';
+        }
+
+        // ---------- Render ----------
+        function renderizar() {
+            const cont = document.getElementById('contenedor');
+            cont.innerHTML = '';
+
+            if (datos.secciones.length === 0) {
+                cont.innerHTML = `
+                    <div class="empty-state">
+                        <b>Todavía no hay productos en el control diario.</b><br>
+                        Podés copiar los productos del inventario mensual y después ponerle el mínimo a cada uno.
+                        <button class="btn-cloud" onclick="abrirModal('modalImportar')">Copiar productos del mensual</button>
+                        <button class="btn-add-cat" onclick="abrirModalCategoria()">Empezar de cero (crear sección)</button>
+                    </div>`;
+                actualizarResumen();
+                actualizarFecha();
+                return;
+            }
+
+            datos.secciones.forEach((cat, ci) => {
+                const section = document.createElement('div');
+                section.className = 'category-section';
+
+                let html = '';
+                cat.items.forEach((item, ii) => {
+                    const est = estadoItem(item);
+                    html += `
+                        <div class="item-row estado-${est.clase}" id="row_${ci}_${ii}" data-name="${esc(item.nombre.toLowerCase())}">
+                            <div class="item-info">
+                                <span class="item-name">${esc(item.nombre)}</span>
+                                <span class="item-estado" id="estado_${ci}_${ii}">${esc(est.texto)}</span>
+                            </div>
+                            <div class="item-inputs">
+                                <div class="input-group">
+                                    <label>Hay</label>
+                                    <input type="number" inputmode="decimal" min="0" step="any" placeholder="-" value="${esc(item.stock ?? '')}" oninput="actualizarStock(${ci}, ${ii}, this.value)">
+                                </div>
+                                <div class="input-group">
+                                    <label>Mín.</label>
+                                    <input type="number" inputmode="decimal" min="0" step="any" class="min-field" placeholder="-" value="${esc(item.minimo ?? '')}" oninput="actualizarMinimo(${ci}, ${ii}, this.value)">
+                                </div>
+                                <button class="btn-action" onclick="abrirModalEditar(${ci}, ${ii})" title="Editar">✏️</button>
+                            </div>
+                        </div>`;
+                });
+
+                section.innerHTML = `
+                    <div class="category-header">
+                        <span>${esc(cat.categoria)}</span>
+                        <span style="display:flex; gap:6px; align-items:center;">
+                            <span class="category-count" id="catcount_${ci}"></span>
+                            <button class="btn-small" style="background:rgba(255,255,255,0.2)" onclick="eliminarCategoria(${ci})" title="Eliminar sección">🗑</button>
+                        </span>
+                    </div>
+                    <div class="items-list">${html || '<div style="padding:12px 0; color:#999; font-size:0.85rem;">Sección vacía. Agregá productos con "+ Producto".</div>'}</div>`;
+                cont.appendChild(section);
+                actualizarContadorSeccion(ci);
+            });
+
+            actualizarResumen();
+            actualizarFecha();
+            aplicarFiltros();
+        }
+
+        function actualizarFila(ci, ii) {
+            const item = datos.secciones[ci].items[ii];
+            const est = estadoItem(item);
+            const row = document.getElementById(`row_${ci}_${ii}`);
+            row.className = `item-row estado-${est.clase}`;
+            document.getElementById(`estado_${ci}_${ii}`).innerText = est.texto;
+            actualizarContadorSeccion(ci);
+            actualizarResumen();
+        }
+
+        function actualizarContadorSeccion(ci) {
+            const el = document.getElementById(`catcount_${ci}`);
+            if (!el) return;
+            const cat = datos.secciones[ci];
+            const pedir = cat.items.filter(i => estadoItem(i).clase === 'rojo').length;
+            if (pedir > 0) {
+                el.className = 'category-count alerta';
+                el.innerText = `${pedir} a pedir`;
+            } else {
+                el.className = 'category-count';
+                el.innerText = `${cat.items.length} ítems`;
+            }
+        }
+
+        function actualizarResumen() {
+            let r = 0, a = 0, v = 0;
+            datos.secciones.forEach(cat => cat.items.forEach(item => {
+                const c = estadoItem(item).clase;
+                if (c === 'rojo') r++;
+                else if (c === 'amarillo') a++;
+                else if (c === 'verde') v++;
+            }));
+            document.getElementById('cntRojo').innerText = r;
+            document.getElementById('cntAmarillo').innerText = a;
+            document.getElementById('cntVerde').innerText = v;
+        }
+
+        function actualizarFecha() {
+            const el = document.getElementById('fechaConteo');
+            if (!datos.fecha) { el.innerText = 'Todavía no se cargó ningún conteo.'; return; }
+            const d = new Date(datos.fecha);
+            el.innerText = 'Último conteo: ' + d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' }) +
+                ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ---------- Edición en línea ----------
+        function actualizarStock(ci, ii, valor) {
+            datos.secciones[ci].items[ii].stock = valor;
+            marcarFecha();
+            guardar();
+            actualizarFila(ci, ii);
+        }
+
+        function actualizarMinimo(ci, ii, valor) {
+            datos.secciones[ci].items[ii].minimo = valor;
+            guardar();
+            actualizarFila(ci, ii);
+        }
+
+        // ---------- Filtros ----------
+        function setFiltro(f) {
+            filtroActual = f;
+            document.getElementById('filtroTodos').classList.toggle('activo', f === 'todos');
+            document.getElementById('filtroPedir').classList.toggle('activo', f === 'pedir');
+            document.getElementById('filtroSinContar').classList.toggle('activo', f === 'sincontar');
+            aplicarFiltros();
+        }
+
+        function aplicarFiltros() {
+            const texto = document.getElementById('buscador').value.toLowerCase().trim();
+            const secciones = document.querySelectorAll('#contenedor .category-section');
+            let visiblesTotal = 0;
+
+            secciones.forEach((sec, ci) => {
+                let visibles = 0;
+                datos.secciones[ci].items.forEach((item, ii) => {
+                    const row = document.getElementById(`row_${ci}_${ii}`);
+                    if (!row) return;
+                    const clase = estadoItem(item).clase;
+                    let ok = item.nombre.toLowerCase().includes(texto);
+                    if (filtroActual === 'pedir') ok = ok && (clase === 'rojo' || clase === 'amarillo');
+                    if (filtroActual === 'sincontar') ok = ok && num(item.stock) === null;
+                    row.style.display = ok ? 'flex' : 'none';
+                    if (ok) visibles++;
+                });
+                const mostrarVacia = datos.secciones[ci].items.length === 0 && !texto && filtroActual === 'todos';
+                sec.style.display = (visibles > 0 || mostrarVacia) ? 'block' : 'none';
+                if (visibles > 0 || mostrarVacia) visiblesTotal++;
+            });
+
+            document.getElementById('noResults').style.display =
+                (datos.secciones.length > 0 && visiblesTotal === 0) ? 'block' : 'none';
+        }
+
+        // ---------- Modales ----------
+        function abrirModal(id) {
+            if (id === 'modalImportar') prepararImportarMensual();
+            document.getElementById(id).style.display = 'flex';
+        }
+        function cerrarModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function llenarSelectCategorias(sel) {
+            const select = document.getElementById('selectCategoria');
+            select.innerHTML = '';
+            datos.secciones.forEach((cat, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = cat.categoria;
+                if (idx === sel) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function abrirModalNuevo() {
+            if (datos.secciones.length === 0) {
+                alert('Primero creá una sección.');
+                abrirModalCategoria();
+                return;
+            }
+            document.getElementById('modalTitulo').innerText = 'Nuevo Producto';
+            document.getElementById('editCat').value = '';
+            document.getElementById('editItem').value = '';
+            document.getElementById('inputNombre').value = '';
+            document.getElementById('selectTipo').value = 'unidad';
+            document.getElementById('inputMinimo').value = '';
+            llenarSelectCategorias(0);
+            document.getElementById('btnEliminar').style.display = 'none';
+            abrirModal('modalProducto');
+        }
+
+        function abrirModalEditar(ci, ii) {
+            const item = datos.secciones[ci].items[ii];
+            document.getElementById('modalTitulo').innerText = 'Editar Producto';
+            document.getElementById('editCat').value = ci;
+            document.getElementById('editItem').value = ii;
+            document.getElementById('inputNombre').value = item.nombre;
+            document.getElementById('selectTipo').value = item.tipo || 'unidad';
+            document.getElementById('inputMinimo').value = item.minimo ?? '';
+            llenarSelectCategorias(ci);
+            document.getElementById('btnEliminar').style.display = 'block';
+            abrirModal('modalProducto');
+        }
+
+        function guardarProducto() {
+            const ciOld = document.getElementById('editCat').value;
+            const iiOld = document.getElementById('editItem').value;
+            const nombre = document.getElementById('inputNombre').value.trim();
+            const ciNew = parseInt(document.getElementById('selectCategoria').value);
+            const tipo = document.getElementById('selectTipo').value;
+            const minimo = document.getElementById('inputMinimo').value;
+
+            if (!nombre) { alert('El nombre no puede estar vacío.'); return; }
+
+            if (ciOld === '') {
+                datos.secciones[ciNew].items.push({ nombre, tipo, minimo, stock: '' });
+            } else {
+                const c = parseInt(ciOld), i = parseInt(iiOld);
+                const item = datos.secciones[c].items.splice(i, 1)[0];
+                item.nombre = nombre;
+                item.tipo = tipo;
+                item.minimo = minimo;
+                if (c === ciNew) datos.secciones[c].items.splice(i, 0, item);
+                else datos.secciones[ciNew].items.push(item);
+            }
+            guardar();
+            cerrarModal('modalProducto');
+            renderizar();
+        }
+
+        function eliminarProducto() {
+            if (!confirm('¿Eliminar este producto del control diario?')) return;
+            const c = parseInt(document.getElementById('editCat').value);
+            const i = parseInt(document.getElementById('editItem').value);
+            datos.secciones[c].items.splice(i, 1);
+            guardar();
+            cerrarModal('modalProducto');
+            renderizar();
+        }
+
+        function abrirModalCategoria() {
+            document.getElementById('inputCategoria').value = '';
+            abrirModal('modalCategoria');
+        }
+
+        function guardarCategoria() {
+            const nombre = document.getElementById('inputCategoria').value.trim();
+            if (!nombre) { alert('Ingresá un nombre para la sección.'); return; }
+            datos.secciones.push({ categoria: nombre.toUpperCase(), items: [] });
+            guardar();
+            cerrarModal('modalCategoria');
+            renderizar();
+        }
+
+        function eliminarCategoria(ci) {
+            const cat = datos.secciones[ci];
+            if (!confirm(`¿Eliminar la sección "${cat.categoria}" y sus ${cat.items.length} productos del control diario?`)) return;
+            datos.secciones.splice(ci, 1);
+            guardar();
+            renderizar();
+        }
+
+        // ---------- Nuevo día ----------
+        function nuevoDia() {
+            if (!confirm('¿Empezar un nuevo conteo? Se borran las cantidades de "Hay". Los productos y mínimos se mantienen.')) return;
+            datos.secciones.forEach(cat => cat.items.forEach(item => item.stock = ''));
+            datos.fecha = null;
+            guardar();
+            setFiltro('todos');
+            renderizar();
+        }
+
+        // ---------- Copiar del inventario mensual ----------
+        let seccionesMensual = [];
+
+        function prepararImportarMensual() {
+            const lista = document.getElementById('listaSeccionesMensual');
+            seccionesMensual = [];
+            try {
+                seccionesMensual = JSON.parse(localStorage.getItem('tomasito_inv_' + branchKey)) || [];
+            } catch (e) { seccionesMensual = []; }
+
+            if (!Array.isArray(seccionesMensual) || seccionesMensual.length === 0) {
+                lista.innerHTML = `<p style="color:#c0392b; font-size:0.85rem;">No encontré el inventario mensual de ${esc(branchName)} en este celular.
+                    Abrí primero el inventario mensual (y restauralo desde la nube si hace falta), y después volvé acá.</p>`;
+                return;
+            }
+
+            lista.innerHTML = seccionesMensual.map((cat, idx) => `
+                <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin:6px 0;">
+                    <input type="checkbox" id="chkMensual_${idx}" checked style="width:auto;">
+                    ${esc(cat.categoria)} <span style="color:#999;">(${(cat.items || []).length})</span>
+                </label>`).join('');
+        }
+
+        function confirmarImportarMensual() {
+            if (seccionesMensual.length === 0) { cerrarModal('modalImportar'); return; }
+            let agregados = 0;
+
+            seccionesMensual.forEach((catM, idx) => {
+                const chk = document.getElementById(`chkMensual_${idx}`);
+                if (!chk || !chk.checked) return;
+
+                let destino = datos.secciones.find(c => c.categoria.trim().toUpperCase() === String(catM.categoria).trim().toUpperCase());
+                if (!destino) {
+                    destino = { categoria: String(catM.categoria).trim().toUpperCase(), items: [] };
+                    datos.secciones.push(destino);
+                }
+                const existentes = new Set(destino.items.map(i => i.nombre.trim().toLowerCase()));
+                (catM.items || []).forEach(itemM => {
+                    const nombre = String(itemM.nombre || '').trim();
+                    if (!nombre || existentes.has(nombre.toLowerCase())) return;
+                    destino.items.push({ nombre, tipo: itemM.tipo || 'unidad', minimo: '', stock: '' });
+                    existentes.add(nombre.toLowerCase());
+                    agregados++;
+                });
+            });
+
+            guardar();
+            cerrarModal('modalImportar');
+            renderizar();
+            alert(`Se agregaron ${agregados} productos. Ahora poné el mínimo de cada uno en la columna "Mín.".\nLos que no uses a diario los podés borrar con ✏️ → Eliminar.`);
+        }
+
+        // ---------- Respaldo ----------
+        function exportarArchivo() {
+            cerrarModal('modalRespaldo');
+            const blob = new Blob([JSON.stringify(datos, null, 1)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `control_diario_tomasito_${branchKey}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function importarArchivo() {
+            cerrarModal('modalRespaldo');
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    try {
+                        const parsed = JSON.parse(ev.target.result);
+                        if (parsed && Array.isArray(parsed.secciones)) {
+                            datos = parsed;
+                            guardar();
+                            renderizar();
+                            alert('¡Control diario restaurado!');
+                        } else if (Array.isArray(parsed)) {
+                            alert('Ese archivo es del inventario MENSUAL. Para usar sus productos acá, usá el botón "Copiar del mensual".');
+                        } else {
+                            alert('El archivo no tiene un formato válido.');
+                        }
+                    } catch (err) {
+                        alert('Error al leer el archivo.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // ---------- WhatsApp ----------
+        function compartirWhatsApp() {
+            const ahora = new Date();
+            let texto = `*FALTANTES - TOMASITO (${branchName.toUpperCase()})*\n`;
+            texto += `${ahora.toLocaleDateString('es-AR')} ${ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}\n`;
+            let hayPedir = false;
+            let justos = [];
+
+            datos.secciones.forEach(cat => {
+                let lineas = '';
+                cat.items.forEach(item => {
+                    const est = estadoItem(item);
+                    if (est.clase === 'rojo') {
+                        hayPedir = true;
+                        lineas += `• ${item.nombre}: hay ${num(item.stock)}, mín. ${num(item.minimo)} → *pedir ${est.falta} ${unidadCorta(item.tipo)}*\n`;
+                    } else if (est.clase === 'amarillo') {
+                        justos.push(`• ${item.nombre} (${num(item.stock)} ${unidadCorta(item.tipo)})`);
+                    }
+                });
+                if (lineas) texto += `\n*${cat.categoria}*\n${lineas}`;
+            });
+
+            if (justos.length) {
+                texto += `\n_Justo en el mínimo:_\n${justos.join('\n')}\n`;
+            }
+
+            if (!hayPedir && justos.length === 0) {
+                alert('No hay productos por debajo del mínimo. ¡Está todo OK!');
+                return;
+            }
+
+            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+            const win = window.open(url, '_blank');
+            if (!win) window.location.href = url;
+        }
+    </script>
+</body>
+</html>
