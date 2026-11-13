@@ -132,6 +132,21 @@
             border-left: 4px solid transparent; margin: 0 -10px; padding-left: 10px; padding-right: 10px;
         }
         .item-row:last-child { border-bottom: none; }
+        .item-row.arrastrando {
+            position: relative; z-index: 50; background: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25); opacity: 0.95;
+        }
+
+        .drag-handle {
+            color: #95a5a6; font-size: 1.3rem; padding: 6px 4px; margin-left: -4px;
+            cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0;
+        }
+        .drag-handle:active { cursor: grabbing; color: var(--primary); }
+
+        .btn-orden {
+            background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 6px;
+            border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: bold; flex: none; min-width: 0;
+        }
         .item-row.estado-rojo { background: var(--rojo-bg); border-left-color: var(--rojo); }
         .item-row.estado-amarillo { background: var(--amarillo-bg); border-left-color: var(--amarillo); }
         .item-row.estado-verde { border-left-color: var(--verde); }
@@ -455,11 +470,22 @@
                 const section = document.createElement('div');
                 section.className = 'category-section';
 
+                const esManual = cat.orden !== 'az';
+                let orden = cat.items.map((item, ii) => ii);
+                if (!esManual) {
+                    orden.sort((a, b) => cat.items[a].nombre.localeCompare(cat.items[b].nombre, 'es', { sensitivity: 'base' }));
+                }
+
                 let html = '';
-                cat.items.forEach((item, ii) => {
+                orden.forEach(ii => {
+                    const item = cat.items[ii];
                     const est = estadoItem(item);
+                    const handle = esManual
+                        ? `<span class="drag-handle" title="Mantener y arrastrar para mover" onpointerdown="iniciarArrastre(event, ${ci})">☰</span>`
+                        : '';
                     html += `
-                        <div class="item-row estado-${est.clase}" id="row_${ci}_${ii}" data-name="${esc(item.nombre.toLowerCase())}">
+                        <div class="item-row estado-${est.clase}" id="row_${ci}_${ii}" data-idx="${ii}" data-name="${esc(item.nombre.toLowerCase())}">
+                            ${handle}
                             <div class="item-info">
                                 <span class="item-name">${esc(item.nombre)}</span>
                                 <span class="item-estado" id="estado_${ci}_${ii}">${esc(est.texto)}</span>
@@ -482,6 +508,7 @@
                     <div class="category-header">
                         <span>${esc(cat.categoria)}</span>
                         <span style="display:flex; gap:6px; align-items:center;">
+                            <button class="btn-orden" onclick="cambiarOrden(${ci})" title="Cambiar orden">${esManual ? 'Manual ☰' : 'AZ 🔀'}</button>
                             <span class="category-count" id="catcount_${ci}"></span>
                             <button class="btn-small" style="background:rgba(255,255,255,0.2)" onclick="eliminarCategoria(${ci})" title="Eliminar sección">🗑</button>
                         </span>
@@ -695,6 +722,105 @@
             const cat = datos.secciones[ci];
             if (!confirm(`¿Eliminar la sección "${cat.categoria}" y sus ${cat.items.length} productos del control diario?`)) return;
             datos.secciones.splice(ci, 1);
+            guardar();
+            renderizar();
+        }
+
+        // ---------- Orden y arrastre (funciona con dedo y con mouse) ----------
+        function cambiarOrden(ci) {
+            const cat = datos.secciones[ci];
+            cat.orden = (cat.orden === 'az') ? 'manual' : 'az';
+            guardar();
+            renderizar();
+        }
+
+        let arrastre = null;
+
+        function iniciarArrastre(e, ci) {
+            e.preventDefault();
+            const handle = e.currentTarget;
+            const row = handle.closest('.item-row');
+            handle.setPointerCapture(e.pointerId);
+            row.classList.add('arrastrando');
+            arrastre = { ci, row, list: row.parentElement, startY: e.pageY, handle, scrollTimer: null, lastPageY: e.pageY };
+            handle.addEventListener('pointermove', moverArrastre);
+            handle.addEventListener('pointerup', terminarArrastre);
+            handle.addEventListener('pointercancel', terminarArrastre);
+            arrastre.scrollTimer = setInterval(autoScroll, 30);
+        }
+
+        function filasVisibles(list) {
+            return Array.from(list.querySelectorAll('.item-row')).filter(r => r.style.display !== 'none');
+        }
+
+        function moverArrastre(e) {
+            if (!arrastre) return;
+            arrastre.lastPageY = e.pageY;
+            arrastre.lastClientY = e.clientY;
+            reubicar();
+        }
+
+        function reubicar() {
+            const { row, list } = arrastre;
+            const y = arrastre.lastPageY;
+            let cambio = true;
+            while (cambio) {
+                cambio = false;
+                const filas = filasVisibles(list);
+                const pos = filas.indexOf(row);
+                const sig = filas[pos + 1];
+                const ant = filas[pos - 1];
+                if (sig) {
+                    const r = sig.getBoundingClientRect();
+                    if (y > r.top + window.scrollY + r.height / 2) {
+                        list.insertBefore(sig, row);
+                        arrastre.startY += r.height;
+                        cambio = true;
+                        continue;
+                    }
+                }
+                if (ant) {
+                    const r = ant.getBoundingClientRect();
+                    if (y < r.top + window.scrollY + r.height / 2) {
+                        list.insertBefore(row, ant);
+                        arrastre.startY -= r.height;
+                        cambio = true;
+                    }
+                }
+            }
+            row.style.transform = `translateY(${y - arrastre.startY}px)`;
+        }
+
+        function autoScroll() {
+            if (!arrastre || arrastre.lastClientY === undefined) return;
+            const margen = 70;
+            let paso = 0;
+            if (arrastre.lastClientY < margen) paso = -12;
+            else if (arrastre.lastClientY > window.innerHeight - margen) paso = 12;
+            if (paso) {
+                window.scrollBy(0, paso);
+                arrastre.lastPageY += paso;
+                reubicar();
+            }
+        }
+
+        function terminarArrastre() {
+            if (!arrastre) return;
+            const { ci, row, list, handle } = arrastre;
+            clearInterval(arrastre.scrollTimer);
+            handle.removeEventListener('pointermove', moverArrastre);
+            handle.removeEventListener('pointerup', terminarArrastre);
+            handle.removeEventListener('pointercancel', terminarArrastre);
+            row.style.transform = '';
+            row.classList.remove('arrastrando');
+            arrastre = null;
+
+            const viejos = datos.secciones[ci].items;
+            const nuevoOrden = Array.from(list.querySelectorAll('.item-row')).map(r => parseInt(r.dataset.idx));
+            const cambio = nuevoOrden.some((idx, pos) => idx !== pos);
+            if (!cambio) return;
+            datos.secciones[ci].items = nuevoOrden.map(idx => viejos[idx]);
+            datos.secciones[ci].orden = 'manual';
             guardar();
             renderizar();
         }
