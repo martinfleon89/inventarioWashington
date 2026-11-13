@@ -386,7 +386,8 @@
 
         // ---------- Sucursal ----------
         window.onload = function () {
-            const saved = localStorage.getItem('tomasito_diario_branch');
+            // Usa la sucursal del diario o, si no hay, la que está abierta en el inventario mensual
+            const saved = localStorage.getItem('tomasito_diario_branch') || localStorage.getItem('tomasito_active_branch');
             if (saved && SUCURSALES[saved]) elegirSucursal(saved);
         };
 
@@ -395,6 +396,11 @@
             branchName = SUCURSALES[key];
             STORAGE_KEY = 'tomasito_diario_' + key;
             localStorage.setItem('tomasito_diario_branch', key);
+            // Deja elegida la misma sucursal en el inventario mensual
+            const BINS = { washington: '6ae89fc2ac6210605a660242', julio: '6aeb5b46ffd5d16053a60759' };
+            localStorage.setItem('tomasito_active_branch', key);
+            localStorage.setItem('tomasito_active_bin', BINS[key]);
+            localStorage.setItem('tomasito_active_name', branchName);
 
             document.getElementById('selectorSucursal').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
@@ -405,6 +411,9 @@
 
         function cambiarSucursal() {
             localStorage.removeItem('tomasito_diario_branch');
+            localStorage.removeItem('tomasito_active_branch');
+            localStorage.removeItem('tomasito_active_bin');
+            localStorage.removeItem('tomasito_active_name');
             location.reload();
         }
 
