@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rentabilidad - Pizzería Tomasito</title>
+    <style>
+        :root {
+            --primary: #c0392b;
+            --secondary: #2c3e50;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --muted: #7f8c8d;
+            --border: #e0e0e0;
+            --rojo: #e74c3c;   --rojo-bg: #fdecea;
+            --amarillo: #e67e22; --amarillo-bg: #fef5e7;
+            --verde: #27ae60;  --verde-bg: #eafaf1;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; padding: 10px; background: var(--bg); color: var(--text);
+        }
+        header { text-align: center; margin-bottom: 12px; }
+        h1 { color: var(--primary); margin: 0 0 4px; font-size: 1.5rem; }
+        .subtitle { color: var(--secondary); font-size: 0.85rem; margin: 0; font-weight: 600; }
+        .wrap { max-width: 760px; margin: 0 auto; }
+
+        .branch-banner {
+            background: #eef2f5; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;
+            font-weight: bold; color: var(--secondary); margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .branch-banner select { font-size: 0.8rem; padding: 3px; border-radius: 4px; }
+        .nav a { color: var(--secondary); font-size: 0.75rem; margin-left: 8px; }
+
+        .card {
+            background: var(--card-bg); border-radius: 10px; padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 10px;
+        }
+        .resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+        .box { border-radius: 10px; padding: 10px 6px; text-align: center; background: #eef2f5; color: var(--secondary); }
+        .box .num { font-size: 1.15rem; font-weight: bold; display: block; }
+        .box .lbl { font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .box.verde { background: var(--verde-bg); color: var(--verde); }
+        .box.rojo { background: var(--rojo-bg); color: var(--rojo); }
+
+        .config { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 0.8rem; }
+        .config input { width: 70px; }
+
+        input, select { font-size: 0.9rem; padding: 6px; border: 1px solid var(--border); border-radius: 6px; }
+        button {
+            background: var(--primary); color: white; border: none; border-radius: 6px;
+            padding: 8px 12px; font-weight: bold; cursor: pointer; font-size: 0.85rem;
+        }
+        button.sec { background: var(--secondary); }
+        button.ghost { background: transparent; color: var(--rojo); padding: 4px 8px; }
+        .full { width: 100%; }
+
+        .prod-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; }
+        .prod-head .nombre { font-weight: bold; color: var(--secondary); }
+        .chip { font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 12px; white-space: nowrap; }
+        .chip.verde { background: var(--verde-bg); color: var(--verde); }
+        .chip.amarillo { background: var(--amarillo-bg); color: var(--amarillo); }
+        .chip.rojo { background: var(--rojo-bg); color: var(--rojo); }
+        .linea { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+        .detalle { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; display: none; }
+        .detalle.abierto { display: block; }
+        .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .fila label { font-size: 0.7rem; color: var(--muted); font-weight: bold; display: block; margin-bottom: 2px; }
+        .fila input { width: 100%; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 6px 0; }
+        th { text-align: left; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; padding: 4px; }
+        td { padding: 4px; border-top: 1px solid var(--border); vertical-align: middle; }
+        td input { width: 70px; padding: 4px; }
+        td.num { text-align: right; white-space: nowrap; }
+        .aviso { font-size: 0.7rem; color: var(--amarillo); }
+
+        .agregar-ing { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 6px; }
+        .sugerido { background: #eef2f5; border-radius: 8px; padding: 8px; font-size: 0.8rem; margin-top: 8px; }
+        .acciones { display: flex; justify-content: space-between; margin-top: 10px; }
+        .vacio { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 20px; }
+
+        @media (max-width: 480px) {
+            .box .num { font-size: 0.95rem; }
+            td input { width: 55px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>🍕 Rentabilidad</h1>
+        <p class="subtitle">Costo, ganancia y precio sugerido por producto</p>
+    </header>
+
+    <div class="branch-banner">
+        <span>Sucursal:
+            <select id="sucursal" onchange="cambiarSucursal(this.value)">
+                <option value="washington">Washington</option>
+                <option value="julio">9 de Julio</option>
+            </select>
+        </span>
+        <span class="nav"><a href="index.html">Mensual</a><a href="diario.html">Diario</a></span>
+    </div>
+
+    <div class="resumen">
+        <div class="box" id="boxIngresos"><span class="num">$0</span><span class="lbl">Ventas / mes</span></div>
+        <div class="box" id="boxCostos"><span class="num">$0</span><span class="lbl">Costo / mes</span></div>
+        <div class="box verde" id="boxGanancia"><span class="num">$0</span><span class="lbl">Ganancia / mes</span></div>
+    </div>
+
+    <div class="card config">
+        <label>Costo de mercadería objetivo:
+            <input type="number" id="objetivo" min="5" max="90" step="1" oninput="cambiarObjetivo(this.value)"> %
+        </label>
+        <span class="linea" style="margin:0">Lo habitual en pizzerías: 25–35 %</span>
+    </div>
+
+    <div class="card">
+        <div class="fila" style="grid-template-columns: 1fr auto; margin:0">
+            <input type="text" id="nuevoNombre" placeholder="Nuevo producto (ej: Muzzarella grande)" onkeydown="if(event.key==='Enter')agregarProducto()">
+            <button onclick="agregarProducto()">+ Agregar</button>
+        </div>
+    </div>
+
+    <div class="config" style="margin-bottom:8px">
+        <span>Ordenar:</span>
+        <select id="orden" onchange="cambiarOrden(this.value)">
+            <option value="ganancia">Mayor ganancia mensual</option>
+            <option value="margen">Menor margen primero</option>
+            <option value="nombre">Nombre A-Z</option>
+        </select>
+    </div>
+
+    <div id="lista"></div>
+</div>
+
+<script>
+    const SUCURSALES = ['washington', 'julio'];
+    let sucursal = 'washington';
+    let datos = { objetivo: 30, orden: 'ganancia', productos: [] };
+    let insumos = [];          // [{nombre, tipo, precio}] tomados del inventario mensual
+    const abiertos = new Set();
+
+    function leer(clave) {
+        try { return JSON.parse(localStorage.getItem(clave)); } catch (e) { return null; }
+    }
+    function escribir(clave, valor) {
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    const num = v => parseFloat(v) || 0;
+    const plata = v => '$' + Math.round(v).toLocaleString('es-AR');
+    const pct = v => (isFinite(v) ? v.toFixed(0) : '0') + ' %';
+
+    // Unidad en la que se carga la cantidad de la receta, según el tipo del inventario
+    function unidadReceta(tipo) {
+        if (tipo === 'kilogramos') return 'g';
+        if (tipo === 'litro') return 'ml';
+        if (tipo === 'gramos') return 'g';
+        return 'u';
+    }
+    // Costo de una cantidad de receta: kg y litro se cargan en g/ml (precio / 1000)
+    function costoIngrediente(ing) {
+        const precio = ing.manual ? num(ing.precioManual) : num((insumos.find(i => i.nombre === ing.nombre) || {}).precio);
+        const tipo = ing.manual ? 'unidad' : ing.tipo;
+        const factor = (tipo === 'kilogramos' || tipo === 'litro') ? 1 / 1000 : 1;
+        return num(ing.cantidad) * precio * factor;
+    }
+
+    function calcular(p) {
+        const costo = p.ingredientes.reduce((t, ing) => t + costoIngrediente(ing), 0) + num(p.extra);
+        const precio = num(p.precio);
+        const ganancia = precio - costo;
+        const margen = precio > 0 ? (ganancia / precio) * 100 : 0;
+        const foodCost = precio > 0 ? (costo / precio) * 100 : 0;
+        const sugerido = costo > 0 ? costo / (datos.objetivo / 100) : 0;
+        const ventas = num(p.ventasMes);
+        return { costo, precio, ganancia, margen, foodCost, sugerido, ventas, gananciaMes: ganancia * ventas };
+    }
+
+    function cargarSucursal() {
+        const guardada = localStorage.getItem('tomasito_active_branch') || localStorage.getItem('tomasito_diario_branch');
+        if (SUCURSALES.includes(guardada)) sucursal = guardada;
+        document.getElementById('sucursal').value = sucursal;
+        const d = leer('tomasito_rent_' + sucursal);
+        datos = Object.assign({ objetivo: 30, orden: 'ganancia', productos: [] }, d || {});
+        const inv = leer('tomasito_inv_' + sucursal) || [];
+        insumos = [];
+        inv.forEach(cat => (cat.items || []).forEach(it => insumos.push({ nombre: it.nombre, tipo: it.tipo, precio: it.precio })));
+        document.getElementById('objetivo').value = datos.objetivo;
+        document.getElementById('orden').value = datos.orden;
+        render();
+    }
+
+    function cambiarSucursal(v) {
+        try { localStorage.setItem('tomasito_active_branch', v); } catch (e) {}
+        abiertos.clear();
+        cargarSucursal();
+    }
+    function guardar() { escribir('tomasito_rent_' + sucursal, datos); }
+
+    function cambiarObjetivo(v) { datos.objetivo = Math.min(90, Math.max(5, num(v) || 30)); guardar(); render(true); }
+    function cambiarOrden(v) { datos.orden = v; guardar(); render(); }
+
+    function agregarProducto() {
+        const input = document.getElementById('nuevoNombre');
+        const nombre = input.value.trim();
+        if (!nombre) return;
+        const id = Date.now().toString(36);
+        datos.productos.push({ id, nombre, precio: '', ventasMes: '', extra: '', ingredientes: [] });
+        abiertos.add(id);
+        input.value = '';
+        guardar(); render();
+    }
+    function borrarProducto(id) {
+        const p = datos.productos.find(x => x.id === id);
+        if (!p || !confirm('¿Borrar "' + p.nombre + '"?')) return;
+        datos.productos = datos.productos.filter(x => x.id !== id);
+        guardar(); render();
+    }
+    function toggle(id) { abiertos.has(id) ? abiertos.delete(id) : abiertos.add(id); render(); }
+
+    function setCampo(id, campo, valor) {
+        const p = datos.productos.find(x => x.id === id);
+        p[campo] = valor; guardar(); render(true);
+    }
+    function agregarIngrediente(id) {
+        const sel = document.getElementById('sel_' + id);
+        const p = datos.productos.find(x => x.id === id);
+        if (sel.value === '__manual') {
+            const nombre = prompt('Nombre del ingrediente (ej: Caja de pizza):');
+            if (!nombre) return;
+            p.ingredientes.push({ nombre: nombre.trim(), manual: true, precioManual: '', cantidad: 1 });
+        } else if (sel.value) {
+            const ins = insumos.find(i => i.nombre === sel.value);
+            p.ingredientes.push({ nombre: ins.nombre, tipo: ins.tipo, cantidad: '' });
+        } else return;
+        guardar(); render();
+    }
+    function setIng(id, idx, campo, valor) {
+        datos.productos.find(x => x.id === id).ingredientes[idx][campo] = valor;
+        guardar(); render(true);
+    }
+    function borrarIng(id, idx) {
+        datos.productos.find(x => x.id === id).ingredientes.splice(idx, 1);
+        guardar(); render();
+    }
+
+    function colorMargen(c) {
+        if (c.precio <= 0 || c.costo <= 0) return '';
+        if (c.foodCost <= datos.objetivo) return 'verde';
+        if (c.foodCost <= datos.objetivo + 10) return 'amarillo';
+        return 'rojo';
+    }
+
+    // soloNumeros: actualiza cifras sin reconstruir inputs (para no perder el foco al escribir)
+    function render(soloNumeros) {
+        let ingresos = 0, costos = 0, ganancia = 0;
+        datos.productos.forEach(p => {
+            const c = calcular(p);
+            ingresos += c.precio * c.ventas; costos += c.costo * c.ventas; ganancia += c.gananciaMes;
+        });
+        document.querySelector('#boxIngresos .num').textContent = plata(ingresos);
+        document.querySelector('#boxCostos .num').textContent = plata(costos);
+        const bg = document.getElementById('boxGanancia');
+        bg.querySelector('.num').textContent = plata(ganancia);
+        bg.className = 'box ' + (ganancia < 0 ? 'rojo' : 'verde');
+
+        if (soloNumeros) {
+            datos.productos.forEach(p => {
+                const el = document.getElementById('p_' + p.id);
+                if (!el) return;
+                const c = calcular(p);
+                el.querySelector('.resumen-prod').innerHTML = resumenProd(p, c);
+                const sug = el.querySelector('.sugerido');
+                if (sug) sug.innerHTML = sugeridoHTML(c);
+                p.ingredientes.forEach((ing, i) => {
+                    const td = document.getElementById('c_' + p.id + '_' + i);
+                    if (td) td.textContent = plata(costoIngrediente(ing));
+                });
+            });
+            return;
+        }
+
+        const lista = [...datos.productos];
+        if (datos.orden === 'nombre') lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        else if (datos.orden === 'margen') lista.sort((a, b) => calcular(a).margen - calcular(b).margen);
+        else lista.sort((a, b) => calcular(b).gananciaMes - calcular(a).gananciaMes);
+
+        const cont = document.getElementById('lista');
+        if (!lista.length) {
+            cont.innerHTML = `<div class="card vacio">Agregá tu primer producto (por ejemplo "Muzzarella grande"),
+                cargá su precio de venta y los ingredientes que lleva.<br><br>
+                ${insumos.length ? 'Los costos se toman de los precios del inventario mensual.' : '⚠️ No hay inventario mensual en esta sucursal: cargá precios en la app mensual o usá ingredientes manuales.'}</div>`;
+            return;
+        }
+        cont.innerHTML = lista.map(p => tarjeta(p, calcular(p))).join('');
+    }
+
+    function resumenProd(p, c) {
+        const col = colorMargen(c);
+        const chip = c.precio > 0 && c.costo > 0
+            ? `<span class="chip ${col}">Margen ${pct(c.margen)}</span>`
+            : `<span class="chip amarillo">Incompleto</span>`;
+        return `<div class="prod-head" onclick="toggle('${p.id}')">
+                    <span class="nombre">${abiertos.has(p.id) ? '▾' : '▸'} ${esc(p.nombre)}</span>${chip}
+                </div>
+                <div class="linea">Venta ${plata(c.precio)} · Costo ${plata(c.costo)} · Ganás ${plata(c.ganancia)} c/u
+                ${c.ventas ? ' · ' + plata(c.gananciaMes) + ' al mes' : ''}</div>`;
+    }
+    function sugeridoHTML(c) {
+        if (c.costo <= 0) return 'Cargá ingredientes para ver el precio sugerido.';
+        const dif = c.sugerido - c.precio;
+        let txt = `Precio sugerido para ${datos.objetivo} % de costo: <b>${plata(c.sugerido)}</b>`;
+        if (c.precio > 0 && dif > 0) txt += ` <span style="color:var(--rojo)">(estás ${plata(dif)} por debajo${c.ventas ? '; subiendo el precio ganarías ' + plata(dif * c.ventas) + ' más al mes' : ''})</span>`;
+        else if (c.precio > 0) txt += ` <span style="color:var(--verde)">✔ tu precio está bien</span>`;
+        return txt;
+    }
+
+    function tarjeta(p, c) {
+        const abierto = abiertos.has(p.id);
+        const filas = p.ingredientes.map((ing, i) => {
+            let precioTxt, aviso = '';
+            if (ing.manual) {
+                precioTxt = `<input type="number" min="0" step="any" placeholder="$ c/u" value="${esc(ing.precioManual)}" oninput="setIng('${p.id}',${i},'precioManual',this.value)">`;
+            } else {
+                const ins = insumos.find(x => x.nombre === ing.nombre);
+                precioTxt = ins && num(ins.precio) ? plata(num(ins.precio)) + '/' + ({ kilogramos: 'kg', litro: 'L', gramos: 'g' }[ing.tipo] || 'u') : '—';
+                if (!ins) aviso = '<div class="aviso">No está en el inventario</div>';
+                else if (!num(ins.precio)) aviso = '<div class="aviso">Sin precio en el inventario mensual</div>';
+            }
+            const u = ing.manual ? 'u' : unidadReceta(ing.tipo);
+            return `<tr>
+                <td>${esc(ing.nombre)}${aviso}</td>
+                <td><input type="number" min="0" step="any" value="${esc(ing.cantidad)}" oninput="setIng('${p.id}',${i},'cantidad',this.value)"> ${u}</td>
+                <td class="num">${precioTxt}</td>
+                <td class="num" id="c_${p.id}_${i}">${plata(costoIngrediente(ing))}</td>
+                <td><button class="ghost" onclick="borrarIng('${p.id}',${i})">✕</button></td>
+            </tr>`;
+        }).join('');
+        const opciones = insumos.map(i => `<option value="${esc(i.nombre)}">${esc(i.nombre)}</option>`).join('');
+
+        return `<div class="card" id="p_${p.id}">
+            <div class="resumen-prod">${resumenProd(p, c)}</div>
+            <div class="detalle ${abierto ? 'abierto' : ''}">
+                <div class="fila">
+                    <div><label>PRECIO DE VENTA $</label>
+                        <input type="number" min="0" step="any" value="${esc(p.precio)}" oninput="setCampo('${p.id}','precio',this.value)"></div>
+                    <div><label>VENDÉS POR MES (unidades)</label>
+                        <input type="number" min="0" step="1" value="${esc(p.ventasMes)}" oninput="setCampo('${p.id}','ventasMes',this.value)"></div>
+                </div>
+                ${p.ingredientes.length ? `<table>
+                    <tr><th>Ingrediente</th><th>Cantidad</th><th class="num">Precio</th><th class="num">Costo</th><th></th></tr>
+                    ${filas}</table>` : '<div class="linea">Todavía no tiene ingredientes.</div>'}
+                <div class="agregar-ing">
+                    <select id="sel_${p.id}"><option value="">+ Elegir ingrediente del inventario…</option>${opciones}
+                        <option value="__manual">✎ Otro (precio manual: caja, gas, etc.)</option></select>
+                    <button class="sec" onclick="agregarIngrediente('${p.id}')">Agregar</button>
+                </div>
+                <div class="fila" style="margin-top:8px">
+                    <div><label>OTROS COSTOS POR UNIDAD $ (opcional)</label>
+                        <input type="number" min="0" step="any" value="${esc(p.extra)}" oninput="setCampo('${p.id}','extra',this.value)"></div>
+                    <div></div>
+                </div>
+                <div class="sugerido">${sugeridoHTML(c)}</div>
+                <div class="acciones">
+                    <button class="ghost" onclick="borrarProducto('${p.id}')">Borrar producto</button>
+                    <button class="sec" onclick="toggle('${p.id}')">Cerrar</button>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    cargarSucursal();
+</script>
+</body>
+</html>
